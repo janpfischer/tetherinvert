@@ -28,7 +28,7 @@ window's behaviour for it; each declares the state it keeps in its `_init_…`:
     devices.py         the camera and the light (a popover)
     lightroompanel.py  Lightroom Classic watching the roll (a popover)
     log.py             the status bar and the log's panel over the page
-    helpmenu.py        the Help menu
+    helpmenu.py        the Help menu, and the doctor's report
 
 style.py has the look: colour tokens for light and dark, and the stylesheet made from them.
 """
@@ -110,6 +110,7 @@ class MainWindow(RollPart, ScanPart, FramesPart, DevelopPart, FinishPart, Preset
     ask_turn = Signal(str, int, str)
     ask_retag = Signal(str, object)
     ask_contact = Signal(str)
+    ask_doctor = Signal()
 
     def __init__(self, sim: bool = False) -> None:
         super().__init__()
@@ -150,6 +151,8 @@ class MainWindow(RollPart, ScanPart, FramesPart, DevelopPart, FinishPart, Preset
         self._hardware.colour_shot.connect(self._on_colour_shot)
         self._hardware.scanned.connect(self._on_scanned)
         self._hardware.failed.connect(self._on_hardware_failed)
+        self._hardware.doctor_line.connect(self._on_doctor_line)
+        self._hardware.doctor_done.connect(self._on_doctor_done)
         self._renderer.done.connect(self._on_written)  # every job of it that ends well has written files
         self._renderer.failed.connect(self._on_failed)
         self._renderer.finished.connect(self._on_render_finished)  # a method, so it runs on the window's thread
@@ -167,6 +170,7 @@ class MainWindow(RollPart, ScanPart, FramesPart, DevelopPart, FinishPart, Preset
         self.ask_cancel_prompt.connect(self._hardware.cancel_prompt)
         self.ask_flatfield.connect(self._hardware.flatfield)
         self.ask_scan.connect(self._hardware.scan)
+        self.ask_doctor.connect(self._hardware.doctor)
         self.ask_render.connect(self._renderer.frame)
         self.ask_render_roll.connect(self._renderer.roll)
         self.ask_live_rate.connect(self._hardware.set_interval)
@@ -451,6 +455,7 @@ class MainWindow(RollPart, ScanPart, FramesPart, DevelopPart, FinishPart, Preset
         self._update_presets_page(now)
         self._update_develop_column()  # which the corrections also update as they are made
         self._update_devices()
+        self._update_help(now)
         self._update_rail()
 
     def _confirm(self, title: str, text: str) -> bool:

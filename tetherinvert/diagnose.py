@@ -75,35 +75,7 @@ def doctor(sim: bool, say: Callable[[str], None] = print) -> int:
             say(f"NOT CONNECTED: {exc}")
     light, camera = devices.get("light"), devices.get("camera")
     try:
-        if camera is None:
-            return 1
-        say(f"camera: {camera.model}")
-        say(f"light:  {light.describe() if light is not None else 'not connected: the test shot is taken in whatever light there is'}")
-        for key in ("iso", "shutter", "aperture"):
-            say(f"{key}: {camera.get(key) or 'not settable from here'}")
-
-        if light is not None:
-            light.set(30, 30, 30)
-        say("\ntest shot at the camera's current exposure…")
-        folder = home() / "doctor"
-        for old in folder.glob("test-shot*"):
-            old.unlink()
-        path = camera.capture(folder / "test-shot", check=False)
-        say(f"camera's name for it: {getattr(camera, 'last_name', '?')}")
-        say(f"saved as: {path}")
-        decodes, lines = describe_raw(path)
-        for line in lines:
-            say(line)
-
-        from .cli import stills_go_to
-
-        say(f"stills go to: {stills_go_to(camera)}")
-        say("\ncamera settings that affect the file:")
-        for name, value in camera.report():
-            if INTERESTING.search(name) or name.startswith("("):
-                say(f"  {name} = {value}")
-        say("\nRESULT: " + ("this camera's files decode; scanning should work." if decodes else "the test shot does not decode, see above."))
-        return 0 if decodes else 1
+        return 0 if take_test_shot(camera, light, say) else 1
     finally:
         try:
             if light is not None:
@@ -112,3 +84,38 @@ def doctor(sim: bool, say: Callable[[str], None] = print) -> int:
         finally:
             if camera is not None:
                 camera.close()
+
+
+def take_test_shot(camera, light, say: Callable[[str], None]) -> bool:
+    """The checks on devices already open: by `doctor`, or by the window's hardware thread (Help ›
+    Run Doctor). Whether the shot decodes; leaves the light at the test shot's level and both open."""
+    if camera is None:
+        say("\nRESULT: no camera, so no test shot.")
+        return False
+    say(f"camera: {camera.model}")
+    say(f"light:  {light.describe() if light is not None else 'not connected: the test shot is taken in whatever light there is'}")
+    for key in ("iso", "shutter", "aperture"):
+        say(f"{key}: {camera.get(key) or 'not settable from here'}")
+
+    if light is not None:
+        light.set(30, 30, 30)
+    say("\ntest shot at the camera's current exposure…")
+    folder = home() / "doctor"
+    for old in folder.glob("test-shot*"):
+        old.unlink()
+    path = camera.capture(folder / "test-shot", check=False)
+    say(f"camera's name for it: {getattr(camera, 'last_name', '?')}")
+    say(f"saved as: {path}")
+    decodes, lines = describe_raw(path)
+    for line in lines:
+        say(line)
+
+    from .cli import stills_go_to
+
+    say(f"stills go to: {stills_go_to(camera)}")
+    say("\ncamera settings that affect the file:")
+    for name, value in camera.report():
+        if INTERESTING.search(name) or name.startswith("("):
+            say(f"  {name} = {value}")
+    say("\nRESULT: " + ("this camera's files decode; scanning should work." if decodes else "the test shot does not decode, see above."))
+    return decodes

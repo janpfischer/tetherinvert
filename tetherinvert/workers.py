@@ -19,6 +19,7 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from . import orient, paths
 from .calibrate import CalibrationError, Roi
 from .camera import CARD_COPY
+from .diagnose import take_test_shot, versions
 from .flatfield import FlatFieldError
 from .session import (
     MISSING,
@@ -78,6 +79,8 @@ class Hardware(QObject):
     # letter, why the last shot was refused); ("", "", "") when nothing is waiting for a shot.
     prompt = Signal(str, str, str)
     colour_shot = Signal(str, object, str)  # a colour of an own-rgb calibration: (letter, its ColourShot as a dict, "") or (letter, None, why not)
+    doctor_line = Signal(str)  # a line of the doctor's report (diagnose.py), as it is found
+    doctor_done = Signal(bool)  # the report is complete: whether the test shot decodes
 
     def __init__(self, sim: bool) -> None:
         super().__init__()
@@ -381,6 +384,33 @@ class Hardware(QObject):
             self.message.emit("Flat field cancelled.")
         self._frame_scan = self._flat = None
         self.prompt.emit("", "", "")
+
+    @Slot()
+    def doctor(self) -> None:
+        """`tetherinvert doctor` on the devices this thread holds, so the window need not let go of
+        the camera: what is installed, what is connected, a test shot and whether it decodes."""
+        say = self.doctor_line.emit
+        for line in versions():
+            say(line)
+        self._connect()
+        say("")
+        for which in ("camera", "light"):
+            if (self._light if which == "light" else self._camera) is None:
+                say(f"NOT CONNECTED: {MISSING[which]}" + (f" ({self._problem[which]})" if self._problem[which] else ""))
+        self.busy.emit(True)
+        decodes = False
+        try:
+            decodes = take_test_shot(self._camera, self._light, say)
+        except Exception as exc:  # perhaps a device went away mid-shot: drop only the one that no longer answers
+            say(f"\nRESULT: the test shot failed: {exc}")
+            if self._camera is not None:
+                self._drop_silent_devices()
+        finally:
+            self.set_framing(self._framing)
+            if self._camera is not None:
+                self._report_exposure()
+            self.busy.emit(False)
+            self.doctor_done.emit(decodes)
 
     def _job(self, work, kind: Optional[str] = None) -> Optional[str]:
         """Runs a job on a Scanner made from what is connected. A Scanlight kind needs both devices,

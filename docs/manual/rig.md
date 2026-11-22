@@ -42,9 +42,6 @@ comes loose costs only that device.
 
 ## Checking it
 
-```
-tetherinvert doctor
-```
-
-prints what is installed and connected, takes one test shot without changing any camera setting,
-and says whether the file decodes. Close the window first: only one program can hold the camera.
+**Help › Run Doctor…** shows what is installed and connected, takes one test shot without changing
+any camera setting, and says whether the file decodes. Without the window, `tetherinvert doctor`
+prints the same; close the window first then, as only one program can hold the camera.

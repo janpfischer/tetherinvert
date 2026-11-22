@@ -1873,7 +1873,7 @@ def test_a_correction_made_at_100_percent_is_shown_there(tmp_path, monkeypatch):
         window.close()
 
 
-def test_the_help_menu_opens_the_manual_shows_the_shortcuts_and_the_version(tmp_path, monkeypatch):
+def test_the_help_menu_opens_the_manual_shows_the_shortcuts_runs_the_doctor_and_the_version(tmp_path, monkeypatch):
     monkeypatch.setenv("TETHERINVERT_HOME", str(tmp_path / "home"))
     from tetherinvert import __version__, about
     from tetherinvert.window.mainwindow import MainWindow
@@ -1886,7 +1886,7 @@ def test_the_help_menu_opens_the_manual_shows_the_shortcuts_and_the_version(tmp_
     window.show()
     try:
         actions = {action.text(): action for action in window.help_menu.actions() if action.text()}
-        assert list(actions) == ["TetherInvert Manual", "Keyboard Shortcuts", "About TetherInvert"]
+        assert list(actions) == ["TetherInvert Manual", "Keyboard Shortcuts", "Run Doctor…", "About TetherInvert"]
         actions["TetherInvert Manual"].trigger()
         assert opened == [about.MANUAL_URL]
         actions["Keyboard Shortcuts"].trigger()
@@ -1899,6 +1899,16 @@ def test_the_help_menu_opens_the_manual_shows_the_shortcuts_and_the_version(tmp_
         assert drawing.renderer().isValid() and abs(drawing.width() / drawing.height() - size.width() / size.height()) < 0.01  # never stretched
         actions["Keyboard Shortcuts"].trigger()
         assert window._shortcuts is dialog  # one window, brought to the front again
+        wait(app, lambda: window._camera_connected)  # the doctor uses the camera the window holds: nothing to close first
+        actions["Run Doctor…"].trigger()
+        doctor = window._doctor
+        assert doctor.isVisible() and not actions["Run Doctor…"].isEnabled() and not doctor.copy_button.isEnabled()
+        wait(app, lambda: not window._doctor_running)
+        report = doctor.report.toPlainText()
+        assert "decodes: yes" in report and "RESULT: this camera's files decode" in report and (tmp_path / "home" / "doctor" / "test-shot.dng").exists()
+        assert actions["Run Doctor…"].isEnabled() and doctor.copy_button.isEnabled() and doctor.shot_button.isEnabled()
+        doctor.copy_button.click()
+        assert QApplication.clipboard().text() == about.text() + "\n\n" + report
         actions["About TetherInvert"].trigger()
         html, plain = abouts[-1]
         assert f"TetherInvert {__version__}" in html and "Build" in html and about.REPOSITORY in html and plain == about.text()

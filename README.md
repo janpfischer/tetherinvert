@@ -137,15 +137,15 @@ or Lightroom behave.
 | `cli.py` | Command line |
 | `window/` | The window: `mainwindow.py` and a module per page (`roll.py`, `scan.py`, `develop.py`, `finish.py`, `presets.py`), the rail, the look (`style.py`), the strip and frame view (`viewer.py`), the roll's metadata form and the frame's row (`metaedit.py`), the wizard's panel (`wizardpanel.py`), and the fonts with their licences (`fonts/`, Instrument Sans and IBM Plex Mono, SIL OFL 1.1) |
 | `lightroom.py`, `tetherinvert.lrplugin/` | The hot folder: request and status files here, the watching and adding in the plug-in (Lua) |
-| `diagnose.py` | `tetherinvert doctor` |
+| `diagnose.py` | The doctor: `tetherinvert doctor` and Help › Run Doctor… |
 | `sim.py` | Simulated light, camera and negative, for development and tests |
 
 ## Contributing
 
 - **Try it on your rig** and report back: that helps most right now.
 - **Issues:** bugs, questions and ideas are welcome as
-  [GitHub issues](https://github.com/janpfischer/tetherinvert/issues). For a bug, include the output
-  of `tetherinvert doctor`.
+  [GitHub issues](https://github.com/janpfischer/tetherinvert/issues). For a bug, include the doctor's
+  report (Help › Run Doctor…, then Copy report).
 - **Pull requests:** open an issue first for anything larger than a fix, so we can agree on the
   approach. Every change comes with a test on the simulator, the full suite and `ruff` pass, and
   the [manual](docs/manual/README.md) is updated in the same change. Match the surrounding code;

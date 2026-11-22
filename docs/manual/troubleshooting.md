@@ -1,14 +1,16 @@
 # When something fails
 
-Start with:
+Start with **Help › Run Doctor…** in the window. It shows what is installed and connected, takes one
+test shot without changing any camera setting, and says whether that file decodes. The shot is kept
+in `~/.tetherinvert/doctor/` (**Show test shot** opens it).
+
+Without the window, the same report comes from the [command line](command-line.md):
 
 ```
 tetherinvert doctor
 ```
 
-It prints what is installed and connected, takes one test shot without changing any camera setting,
-and says whether that file decodes. The shot is kept in `~/.tetherinvert/doctor/`. Close the window
-first: only one program can hold the camera.
+Close the window first: only one program can hold the camera.
 
 | Message | What to do |
 |---|---|
@@ -30,5 +32,7 @@ A shot that fails during calibration is kept in `~/.tetherinvert/failed/`.
 ## Reporting a problem
 
 Open an [issue](https://github.com/janpfischer/tetherinvert/issues) with what you did, what happened,
-the window's log (**Log**, then **Copy**), the details from *About TetherInvert* (**Copy details**), the output of `tetherinvert doctor`, and your rig (camera, lens, light, operating system). For a RAW
-file that does not decode, attach the file from `~/.tetherinvert/doctor/` or `~/.tetherinvert/failed/`.
+the window's log (**Log**, then **Copy**), the doctor's report (**Help › Run Doctor…**, then **Copy
+report**, which includes the details from *About TetherInvert*), and your rig (camera, lens, light,
+operating system). For a RAW file that does not decode, attach the test shot (**Show test shot**) or
+the file from `~/.tetherinvert/failed/`.

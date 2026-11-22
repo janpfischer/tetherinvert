@@ -45,7 +45,7 @@ libraries. It needs a system at least as new as:
 Three things are the system's to allow, not TetherInvert's:
 
 - **Opening the camera.** The rules that let you use a USB camera without root come with your
-  distribution's libgphoto2 package, installed on most desktops. If `tetherinvert doctor` sees no
+  distribution's libgphoto2 package, installed on most desktops. If the doctor (**Help › Run Doctor…**) sees no
   camera that `lsusb` lists, install it (`libgphoto2-6t64` on Ubuntu 24.04, `libgphoto2` on
   Fedora) and plug the camera in again.
 - **The file manager lets go of the camera.** GNOME and others mount a camera as soon as it is

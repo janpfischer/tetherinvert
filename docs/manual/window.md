@@ -86,10 +86,15 @@ Lines can be selected with the mouse and copied with ⌘C, too. The log keeps th
 
 ## The Help menu
 
-<img src="img/help-menu.png" width="248" alt="The Help menu: TetherInvert Manual, Keyboard Shortcuts, About TetherInvert">
+<img src="img/help-menu.png" width="248" alt="The Help menu: TetherInvert Manual, Keyboard Shortcuts, Run Doctor, About TetherInvert">
 
 - **TetherInvert Manual** (⌘? on a Mac) opens this manual in your web browser.
 - **Keyboard Shortcuts** opens the drawing below in a window of its own, to keep beside the main one.
+- **Run Doctor…** checks what is installed and connected, takes one test shot without changing any
+  camera setting, and says whether the file decodes (see [When something fails](troubleshooting.md)).
+  **Copy report** puts the report on the clipboard, with the details from About, ready to paste into an
+  issue; **Show test shot** opens the folder that keeps the shot. It can be run whenever the window is
+  not scanning or calibrating.
 - **About TetherInvert** shows the version and the build, and what TetherInvert runs on (system, Python, Qt,
   camera library, RAW decoder). **Copy details** puts all of it on the clipboard: paste it into an
   issue when you report a problem. On a Mac, About is in the **TetherInvert** menu, next to the Apple menu.

@@ -16,7 +16,7 @@ from pathlib import Path
 from . import __version__
 
 REPOSITORY = "https://github.com/janpfischer/tetherinvert"
-MANUAL_URL = f"{REPOSITORY}/blob/main/docs/manual/README.md"  # the manual describes main (docs/manual/README.md)
+MANUAL_URL = "https://tetherinvert.com/manual"  # the manual describes main (docs/manual/README.md)
 
 
 def build() -> str:

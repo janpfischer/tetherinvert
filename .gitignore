@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+*.tif
+*.ARW
+build/
+dist/
+packaging/macos/signing.env
+.DS_Store
+# The build in words, written by packaging/{macos,linux}/build.sh while it runs (Help › About)
+tetherinvert/_build.py

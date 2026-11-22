@@ -1,0 +1,157 @@
+# Builds the app on GitHub runners: TetherInvert.app as a DMG with packaging/macos/build.sh, and
+# the Linux folder as a tarball for x86_64 and aarch64 with packaging/linux/build.sh: the same
+# scripts used on a Mac or a Linux machine.
+#
+#   Run by hand (Actions tab, "App", Run workflow): the DMG and the tarballs are attached to the run.
+#   Every push to a pull request: the same, the DMG always signed ad hoc.
+#   Push a tag v<version>, e.g. v0.1.0: all three are also published as a GitHub release.
+#
+# macOS signing is optional. Without the secrets below the app is signed ad hoc: it runs, but a copy
+# downloaded from GitHub is quarantined and macOS refuses to open it until it is allowed in
+# System Settings > Privacy & Security ("Open Anyway") or the quarantine flag is removed.
+# With a Developer ID certificate (Apple Developer Program) set these repository secrets:
+#   MACOS_CERTIFICATE           the "Developer ID Application" certificate with its key, .p12, base64
+#   MACOS_CERTIFICATE_PASSWORD  the .p12's password
+#   MACOS_CODESIGN_IDENTITY     e.g. "Developer ID Application: Your Name (TEAMID)"
+#   NOTARY_API_KEY, NOTARY_API_KEY_ID, NOTARY_API_ISSUER: to notarize, with an App Store Connect
+#                               API key (the .p8 file's text, its key ID, the issuer ID)
+
+name: App
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    tags: ["v*"]
+
+concurrency:  # a new commit on a pull request cancels the build of the one before
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: write  # for the release on a tag
+
+jobs:
+  macos:
+    runs-on: macos-15  # Apple silicon; the build is arm64 like the wheels it bundles
+    timeout-minutes: 30
+    env:
+      SIGN: ${{ github.event_name != 'pull_request' }}  # pull requests build ad hoc
+      HAVE_CERTIFICATE: ${{ github.event_name != 'pull_request' && secrets.MACOS_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Tag matches the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' tetherinvert/__init__.py)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME but tetherinvert/__init__.py says $version"; exit 1; }
+
+      - name: Import the signing certificate
+        if: env.HAVE_CERTIFICATE == 'true'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password=$(uuidgen)
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/certificate.p12"
+
+      - name: The notarization key
+        if: env.HAVE_CERTIFICATE == 'true'
+        env:
+          NOTARY_API_KEY: ${{ secrets.NOTARY_API_KEY }}
+        run: |
+          if [ -n "$NOTARY_API_KEY" ]; then
+            printf '%s\n' "$NOTARY_API_KEY" > "$RUNNER_TEMP/notary.p8"
+            echo "NOTARY_API_KEY=$RUNNER_TEMP/notary.p8" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build
+        env:
+          PYTHON: python
+          TETHERINVERT_CODESIGN: ${{ env.SIGN == 'true' && secrets.MACOS_CODESIGN_IDENTITY || '' }}
+          NOTARY_API_KEY_ID: ${{ env.SIGN == 'true' && secrets.NOTARY_API_KEY_ID || '' }}
+          NOTARY_API_ISSUER: ${{ env.SIGN == 'true' && secrets.NOTARY_API_ISSUER || '' }}
+        run: packaging/macos/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tetherinvert-macos-arm64
+          path: dist/*.dmg
+          if-no-files-found: error
+          compression-level: 0  # a DMG is already compressed
+
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest Ubuntu each architecture's PySide6 wheels allow: the app needs the build
+          # machine's glibc or newer (2.35 here; Debian 12, Ubuntu 22.04, Fedora 36 and later).
+          - arch: x86_64
+            runner: ubuntu-22.04
+          # PySide6 on aarch64 needs glibc 2.39: Ubuntu 24.04, Debian 13, Fedora 40 and later.
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Tag matches the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' tetherinvert/__init__.py)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME but tetherinvert/__init__.py says $version"; exit 1; }
+
+      # Qt's X11 platform plugin links these; installed here, PyInstaller copies them into the app,
+      # so it does not depend on the user having them. Xvfb lets the build test the plugin.
+      - name: Qt's X11 libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb libegl1 libxkbcommon-x11-0 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xkb1
+
+      - name: Build
+        env:
+          PYTHON: python
+        run: packaging/linux/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tetherinvert-linux-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0  # already compressed
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "TetherInvert ${GITHUB_REF_NAME#v}" --generate-notes

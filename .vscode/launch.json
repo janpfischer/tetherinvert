@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TetherInvert window (sim)",
+      "type": "debugpy", "request": "launch",
+      "module": "tetherinvert", "args": ["--sim", "gui"],
+      "justMyCode": true,
+      "env": { "TETHERINVERT_HOME": "/tmp/tetherinvert-dev" }
+    },
+    {
+      "name": "TetherInvert command (sim)",
+      "type": "debugpy", "request": "launch",
+      "module": "tetherinvert", "args": ["--sim", "status"],
+      "env": { "TETHERINVERT_HOME": "/tmp/tetherinvert-dev" }
+    },
+    {
+      "name": "pytest current file",
+      "type": "debugpy", "request": "launch",
+      "module": "pytest", "args": ["${file}", "-x"]
+    }
+  ]
+}

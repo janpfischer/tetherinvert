@@ -1,6 +1,6 @@
 [project]
 name = "tetherinvert"
-version = "0.1.0"
+version = "0.1.1"
 description = "Tethered film scanning with a Scanlight, straight to 16-bit TIFF."
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -18,13 +18,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "lupa>=2.2"]  # lupa runs the Lightroom plug-in's Lua in the tests
+dev = [
+    "pytest>=8",
+    "lupa>=2.2",
+] # lupa runs the Lightroom plug-in's Lua in the tests
 
 [project.scripts]
 tetherinvert = "tetherinvert.cli:main"
 
 [build-system]
-requires = ["setuptools>=77"]  # 77 reads the SPDX licence expression
+requires = ["setuptools>=77"]           # 77 reads the SPDX licence expression
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -32,7 +35,10 @@ packages = ["tetherinvert", "tetherinvert.window"]
 
 [tool.setuptools.package-data]
 tetherinvert = ["tetherinvert.lrplugin/*.lua"]
-"tetherinvert.window" = ["fonts/*.ttf", "fonts/*.txt"]  # Instrument Sans and IBM Plex Mono, with their licences (SIL OFL 1.1)
+"tetherinvert.window" = [
+    "fonts/*.ttf",
+    "fonts/*.txt",
+] # Instrument Sans and IBM Plex Mono, with their licences (SIL OFL 1.1)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
